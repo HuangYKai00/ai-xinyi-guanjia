@@ -1,0 +1,231 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AI 心意管家 · 晨间卡片</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@500;600;700;800&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --cream: #fff8ea;
+      --paper: #fffdf8;
+      --ink: #1e2733;
+      --muted: #78818d;
+      --line: #e7dfd2;
+      --blue: #3158e8;
+      --blue-pale: #e5ebff;
+      --coral: #ff6752;
+      --mint: #0f9d87;
+      --yellow: #f4ca4e;
+      --soft: #f6efe3;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body {
+      min-height: 100vh;
+      background: #d9dde6;
+      color: var(--ink);
+      font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button { font: inherit; }
+    button:focus-visible { outline: 3px solid var(--coral); outline-offset: 3px; }
+    .app {
+      width: min(100%, 430px);
+      min-height: 100dvh;
+      margin: 0 auto;
+      display: flex;
+      flex-direction: column;
+      background: var(--cream);
+      overflow: hidden;
+    }
+    .screen {
+      flex: 1;
+      min-height: 0;
+      overflow: auto;
+      padding: 22px 20px 26px;
+      scrollbar-width: none;
+    }
+    .screen::-webkit-scrollbar { display: none; }
+    .screen[hidden] { display: none; }
+    .app-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 28px;
+    }
+    .app-bar small { display: block; color: var(--muted); font-size: 11px; }
+    .app-bar h1 { margin: 7px 0 0; font-size: 24px; line-height: 1.25; letter-spacing: -.03em; }
+    .app-mark {
+      width: 42px;
+      height: 42px;
+      display: grid;
+      place-items: center;
+      background: var(--blue);
+      color: #fff;
+      font: 800 17px "Manrope", sans-serif;
+      letter-spacing: -.08em;
+    }
+    .app-bar .mark-note { margin-top: 6px; color: var(--blue); font: 700 10px "Manrope", sans-serif; text-align: center; }
+    .kicker { margin: 0 0 10px; color: var(--blue); font: 700 11px "Manrope", sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+    .page-title { margin: 0; font-size: 30px; line-height: 1.1; letter-spacing: -.04em; }
+    .page-copy { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.75; }
+
+    .next-card {
+      position: relative;
+      min-height: 246px;
+      padding: 23px 22px 20px;
+      overflow: hidden;
+      background: var(--blue);
+      color: #fff;
+    }
+    .next-card::after {
+      content: "";
+      position: absolute;
+      right: -46px;
+      bottom: -52px;
+      width: 164px;
+      height: 164px;
+      border: 20px solid rgba(255,255,255,.16);
+      border-radius: 50%;
+    }
+    .next-head { display: flex; justify-content: space-between; align-items: center; font-size: 11px; opacity: .82; }
+    .next-tag { padding: 5px 8px; background: var(--yellow); color: var(--ink); font-size: 10px; font-weight: 700; }
+    .next-count { margin-top: 28px; font: 800 90px/.78 "Manrope", sans-serif; letter-spacing: -.1em; }
+    .next-count span { margin-left: 7px; font: 600 14px "Noto Sans SC", sans-serif; letter-spacing: 0; }
+    .next-name { position: relative; z-index: 1; margin-top: 20px; font-size: 19px; font-weight: 700; }
+    .next-meta { position: relative; z-index: 1; margin-top: 4px; color: rgba(255,255,255,.75); font-size: 11px; }
+    .section-head { display: flex; justify-content: space-between; align-items: baseline; margin: 30px 0 12px; }
+    .section-head h2 { margin: 0; font-size: 17px; }
+    .section-head span { color: var(--muted); font: 700 11px "Manrope", sans-serif; }
+    .queue { border-top: 1px solid var(--line); }
+    .queue-row {
+      display: grid;
+      grid-template-columns: 52px minmax(0, 1fr) auto;
+      align-items: center;
+      gap: 12px;
+      min-height: 79px;
+      border-bottom: 1px solid var(--line);
+    }
+    .queue-row.off { opacity: .45; }
+    .queue-date { color: var(--blue); font: 800 17px/1.05 "Manrope", sans-serif; }
+    .queue-date small { display: block; margin-top: 4px; color: var(--muted); font: 400 10px "Noto Sans SC", sans-serif; }
+    .queue-name { font-size: 14px; font-weight: 700; }
+    .queue-meta { margin-top: 4px; color: var(--muted); font-size: 11px; line-height: 1.4; }
+    .queue-meta b { color: var(--mint); font-weight: 600; }
+    .queue-meta .holiday { color: var(--coral); }
+    .queue-days { min-width: 47px; color: var(--coral); text-align: right; font: 800 20px "Manrope", sans-serif; }
+    .queue-days small { display: block; color: var(--muted); font: 400 10px "Noto Sans SC", sans-serif; }
+    .archive { margin-top: 30px; padding: 17px 18px; border: 1px solid var(--line); background: var(--soft); }
+    .archive-head { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 11px; }
+    .archive-head strong { color: var(--coral); font-size: 12px; }
+    .archive-item { display: flex; justify-content: space-between; gap: 12px; padding-top: 14px; margin-top: 13px; border-top: 1px solid var(--line); font-size: 12px; }
+    .archive-item span { color: var(--muted); font-size: 11px; text-align: right; }
+
+    .people-summary { display: flex; justify-content: space-between; align-items: end; margin: 28px 0 23px; padding-bottom: 18px; border-bottom: 2px solid var(--ink); }
+    .people-summary strong { font: 800 58px/.8 "Manrope", sans-serif; color: var(--blue); letter-spacing: -.1em; }
+    .people-summary p { max-width: 150px; margin: 0; color: var(--muted); font-size: 11px; line-height: 1.65; text-align: right; }
+    .contact-list { display: grid; gap: 12px; }
+    .contact-card { padding: 16px; border: 1px solid var(--line); background: var(--paper); }
+    .contact-top { display: flex; align-items: flex-start; gap: 12px; }
+    .contact-initial { width: 40px; height: 40px; display: grid; place-items: center; flex: 0 0 auto; background: var(--blue-pale); color: var(--blue); font-weight: 700; }
+    .contact-card h2 { margin: 0; font-size: 16px; }
+    .contact-card .relation { margin-top: 3px; color: var(--muted); font-size: 11px; }
+    .contact-soon { margin-left: auto; color: var(--coral); text-align: right; font-size: 11px; }
+    .contact-soon strong { display: block; font: 800 19px "Manrope", sans-serif; }
+    .traits { margin: 15px 0 12px 52px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .day-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-left: 52px; }
+    .day-chip { padding: 5px 7px; background: var(--soft); color: var(--ink); font-size: 10px; }
+    .day-chip.auto { background: #e2f3ef; color: var(--mint); }
+
+    .history-intro { margin: 26px 0 24px; padding: 18px; border-left: 4px solid var(--yellow); background: var(--paper); color: var(--muted); font-size: 12px; line-height: 1.7; }
+    .history-list { position: relative; padding-left: 25px; }
+    .history-list::before { content: ""; position: absolute; left: 5px; top: 5px; bottom: 5px; width: 1px; background: var(--line); }
+    .history-item { position: relative; padding: 0 0 22px 17px; }
+    .history-item::before { content: ""; position: absolute; left: -24px; top: 4px; width: 9px; height: 9px; background: var(--blue); border: 3px solid var(--cream); box-shadow: 0 0 0 1px var(--blue); }
+    .history-item.closed::before { background: var(--coral); box-shadow: 0 0 0 1px var(--coral); }
+    .history-date { color: var(--muted); font: 700 11px "Manrope", sans-serif; }
+    .history-item h2 { margin: 7px 0 4px; font-size: 15px; }
+    .history-item p { margin: 0; color: var(--muted); font-size: 11px; }
+    .history-state { display: inline-block; margin-top: 10px; color: var(--mint); font-size: 10px; }
+    .history-state.closed { color: var(--coral); }
+
+    .bottom-nav {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      flex: 0 0 auto;
+      padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+      background: var(--paper);
+      border-top: 1px solid var(--line);
+    }
+    .tab { min-height: 48px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; }
+    .tab[aria-selected="true"] { color: var(--blue); font-weight: 700; }
+    .tab[aria-selected="true"]::before { content: ""; display: block; width: 22px; height: 3px; margin: 0 auto 6px; background: var(--coral); }
+    .tab:not([aria-selected="true"])::before { content: ""; display: block; width: 22px; height: 3px; margin: 0 auto 6px; background: transparent; }
+    @media (min-width: 600px) {
+      body { padding: 24px 0; }
+      .app { min-height: calc(100dvh - 48px); border-radius: 28px; box-shadow: 0 20px 70px rgba(43,52,70,.2); }
+    }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <main class="screen" id="screen-reminders" role="tabpanel" aria-labelledby="tab-reminders">
+      <header class="app-bar"><div><small>2026 年 4 月 27 日 · 星期一</small><h1>把心意放在今天</h1></div><div><div class="app-mark">AI</div><div class="mark-note">心意</div></div></header>
+      <p class="kicker">NEXT UP</p>
+      <section class="next-card"><div class="next-head"><span>下一件要记得的事</span><span class="next-tag">生日</span></div><div class="next-count">3<span>天后</span></div><div class="next-name">妈妈</div><div class="next-meta">4 月 30 日 · 母亲 · 爱养花，今年刚退休</div></section>
+      <div class="section-head"><h2>接下来</h2><span>05 个生效提醒</span></div>
+      <div class="queue">
+        <article class="queue-row"><time class="queue-date">05.04<small>周一</small></time><div><div class="queue-name">妻子</div><div class="queue-meta"><b>结婚纪念日</b> · 手动设定</div></div><div class="queue-days">7<small>天后</small></div></article>
+        <article class="queue-row"><time class="queue-date">05.10<small>周日</small></time><div><div class="queue-name">妈妈</div><div class="queue-meta"><b>母亲节</b> · 自动关联</div></div><div class="queue-days">13<small>天后</small></div></article>
+        <article class="queue-row off"><time class="queue-date">06.11<small>周四</small></time><div><div class="queue-name">老同学李明</div><div class="queue-meta">生日 · 提醒已关闭</div></div><div class="queue-days">45<small>天后</small></div></article>
+        <article class="queue-row"><time class="queue-date">06.19<small>周五</small></time><div><div class="queue-name">端午节</div><div class="queue-meta"><b class="holiday">纯节日</b> · 未关联联系人</div></div><div class="queue-days">53<small>天后</small></div></article>
+        <article class="queue-row"><time class="queue-date">06.21<small>周日</small></time><div><div class="queue-name">爸爸</div><div class="queue-meta"><b>父亲节</b> · 自动关联</div></div><div class="queue-days">55<small>天后</small></div></article>
+      </div>
+      <section class="archive"><div class="archive-head"><strong>已过期</strong><span>提醒列表底部归档</span></div><div class="archive-item"><div>女儿小月 · 儿童节</div><span>4 月 10 日</span></div><div class="archive-item"><div>老王 · 入职纪念日</div><span>3 月 20 日</span></div></section>
+    </main>
+
+    <main class="screen" id="screen-contacts" role="tabpanel" aria-labelledby="tab-contacts" hidden>
+      <header class="app-bar"><div><small>PEOPLE YOU CARE ABOUT</small><h1>联系人</h1></div><div><div class="app-mark">05</div><div class="mark-note">位联系人</div></div></header>
+      <section class="people-summary"><strong>05</strong><p>每个人都有不止一个值得记得的日子，最近的一件事会显示在这里。</p></section>
+      <div class="contact-list">
+        <article class="contact-card"><div class="contact-top"><div class="contact-initial">妈</div><div><h2>妈妈</h2><div class="relation">母亲</div></div><div class="contact-soon"><strong>3</strong>天后</div></div><p class="traits">爱养花，今年刚退休</p><div class="day-strip"><span class="day-chip">生日 · 4 月 30 日</span><span class="day-chip auto">母亲节 · 自动关联</span></div></article>
+        <article class="contact-card"><div class="contact-top"><div class="contact-initial">妻</div><div><h2>妻子</h2><div class="relation">妻子</div></div><div class="contact-soon"><strong>7</strong>天后</div></div><p class="traits">喜欢烘焙和旅行</p><div class="day-strip"><span class="day-chip">结婚纪念日 · 5 月 4 日</span><span class="day-chip auto">妇女节 · 自动关联</span></div></article>
+        <article class="contact-card"><div class="contact-top"><div class="contact-initial">父</div><div><h2>爸爸</h2><div class="relation">父亲</div></div><div class="contact-soon"><strong>55</strong>天后</div></div><p class="traits">退休教师，爱下棋钓鱼</p><div class="day-strip"><span class="day-chip auto">父亲节 · 自动关联</span></div></article>
+        <article class="contact-card"><div class="contact-top"><div class="contact-initial">月</div><div><h2>女儿小月</h2><div class="relation">女儿</div></div><div class="contact-soon"><strong>120</strong>天后</div></div><p class="traits">小学三年级，学钢琴</p><div class="day-strip"><span class="day-chip">生日 · 8 月 25 日</span></div></article>
+        <article class="contact-card"><div class="contact-top"><div class="contact-initial">李</div><div><h2>老同学李明</h2><div class="relation">大学室友</div></div><div class="contact-soon"><strong>45</strong>天后</div></div><p class="traits">爱打篮球，程序员</p><div class="day-strip"><span class="day-chip">生日 · 6 月 11 日</span></div></article>
+      </div>
+    </main>
+
+    <main class="screen" id="screen-history" role="tabpanel" aria-labelledby="tab-history" hidden>
+      <header class="app-bar"><div><small>THE DAYS THAT HAPPENED</small><h1>历史记录</h1></div><div><div class="app-mark">05</div><div class="mark-note">段记忆</div></div></header>
+      <div class="history-intro">按日子保存已经发生的提醒。这里留下的是那一天本身，以及当时保存下来的内容状态。</div>
+      <div class="history-list">
+        <article class="history-item closed"><time class="history-date">2026.04.20</time><h2>邻居张阿姨 · 妇女节</h2><p>邻居 · 提醒已关闭</p><span class="history-state closed">内容未生成</span></article>
+        <article class="history-item"><time class="history-date">2026.03.15</time><h2>爸爸 · 生日</h2><p>父亲</p><span class="history-state">祝福、礼物与贺卡已保存</span></article>
+        <article class="history-item"><time class="history-date">2026.02.14</time><h2>妻子 · 情人节</h2><p>妻子</p><span class="history-state">祝福、礼物与贺卡已保存</span></article>
+        <article class="history-item"><time class="history-date">2026.01.18</time><h2>妈妈 · 生日</h2><p>母亲</p><span class="history-state">祝福、礼物与贺卡已保存</span></article>
+        <article class="history-item"><time class="history-date">2025.12.25</time><h2>老王 · 入职纪念日</h2><p>前同事</p><span class="history-state">祝福、礼物与贺卡已保存</span></article>
+      </div>
+    </main>
+
+    <nav class="bottom-nav" role="tablist" aria-label="主导航">
+      <button class="tab" id="tab-reminders" role="tab" aria-selected="true" aria-controls="screen-reminders" data-screen="reminders">提醒</button>
+      <button class="tab" id="tab-contacts" role="tab" aria-selected="false" aria-controls="screen-contacts" data-screen="contacts">联系人</button>
+      <button class="tab" id="tab-history" role="tab" aria-selected="false" aria-controls="screen-history" data-screen="history">历史</button>
+    </nav>
+  </div>
+  <script>
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    const screens = [...document.querySelectorAll('[role="tabpanel"]')];
+    tabs.forEach(tab => tab.addEventListener('click', () => {
+      tabs.forEach(item => item.setAttribute('aria-selected', String(item === tab)));
+      screens.forEach(screen => { screen.hidden = screen.id !== `screen-${tab.dataset.screen}`; });
+    }));
+  </script>
+</body>
+</html>

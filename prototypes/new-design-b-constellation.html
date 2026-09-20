@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AI 心意管家 · 关系星座</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=DM+Sans:wght@400;500;600;700&family=Noto+Sans+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --night: #11152b;
+      --panel: #1b2140;
+      --panel-light: #242b4e;
+      --text: #f5f2e9;
+      --muted: #a4a8bd;
+      --line: #3a4165;
+      --violet: #9a8cff;
+      --aqua: #70e2d0;
+      --orange: #f3a25d;
+      --pink: #ed7894;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { min-height: 100vh; background: #050711; color: var(--text); font-family: "Noto Sans SC", sans-serif; -webkit-font-smoothing: antialiased; }
+    button { font: inherit; }
+    button:focus-visible { outline: 2px solid var(--orange); outline-offset: 3px; }
+    .app { width: min(100%, 430px); min-height: 100dvh; margin: 0 auto; display: flex; flex-direction: column; background: var(--night); overflow: hidden; }
+    .screen { flex: 1; min-height: 0; overflow: auto; padding: 20px 18px 28px; scrollbar-width: none; }
+    .screen::-webkit-scrollbar { display: none; }
+    .screen[hidden] { display: none; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 27px; }
+    .header h1 { margin: 0; font-size: 22px; letter-spacing: -.04em; }
+    .header small { display: block; margin-top: 5px; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: .08em; }
+    .header-code { padding: 7px 9px; border: 1px solid var(--line); color: var(--aqua); font: 10px "DM Mono", monospace; }
+    .eyebrow { margin: 0 0 9px; color: var(--aqua); font: 10px "DM Mono", monospace; letter-spacing: .1em; }
+    .page-title { margin: 0; font-size: 31px; line-height: 1.1; letter-spacing: -.06em; }
+    .page-desc { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.75; }
+
+    .orbit-card { position: relative; min-height: 300px; margin-top: 25px; overflow: hidden; background: var(--panel); border: 1px solid var(--line); }
+    .orbit-card::before, .orbit-card::after { content: ""; position: absolute; border: 1px solid var(--line); border-radius: 50%; pointer-events: none; }
+    .orbit-card::before { width: 340px; height: 340px; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+    .orbit-card::after { width: 218px; height: 218px; left: 50%; top: 50%; transform: translate(-50%, -50%); }
+    .orbit-center { position: absolute; left: 50%; top: 50%; width: 124px; height: 124px; transform: translate(-50%, -50%); display: grid; place-items: center; border: 1px solid var(--aqua); border-radius: 50%; background: var(--night); text-align: center; z-index: 1; }
+    .orbit-center strong { display: block; color: var(--aqua); font: 500 42px/.8 "DM Mono", monospace; }
+    .orbit-center span { display: block; margin-top: 8px; color: var(--muted); font-size: 10px; }
+    .orbit-node { position: absolute; z-index: 2; width: 70px; text-align: center; color: var(--text); font-size: 10px; }
+    .orbit-node i { display: grid; place-items: center; width: 38px; height: 38px; margin: 0 auto 5px; border: 1px solid var(--violet); border-radius: 50%; background: var(--panel-light); color: var(--violet); font-style: normal; font-weight: 700; }
+    .orbit-node strong { display: block; font: 500 12px "DM Mono", monospace; color: var(--orange); }
+    .node-mom { left: 17px; top: 48px; }
+    .node-wife { right: 15px; top: 30px; }
+    .node-dad { right: 7px; bottom: 25px; }
+    .node-holiday { left: 12px; bottom: 25px; }
+    .orbit-caption { position: absolute; left: 17px; right: 17px; bottom: 10px; color: var(--muted); font: 9px "DM Mono", monospace; text-align: center; z-index: 3; }
+
+    .section-title { display: flex; justify-content: space-between; align-items: center; margin: 28px 0 12px; }
+    .section-title h2 { margin: 0; font-size: 16px; }
+    .section-title span { color: var(--muted); font: 10px "DM Mono", monospace; }
+    .signal-list { display: grid; gap: 8px; }
+    .signal { display: grid; grid-template-columns: 53px minmax(0, 1fr) auto; gap: 11px; align-items: center; min-height: 72px; padding: 11px; background: var(--panel); border-left: 3px solid var(--violet); }
+    .signal.urgent { border-color: var(--orange); }
+    .signal.off { border-color: var(--line); opacity: .46; }
+    .signal-date { color: var(--muted); font: 11px/1.4 "DM Mono", monospace; }
+    .signal-date strong { display: block; color: var(--text); font-size: 14px; font-weight: 400; }
+    .signal-name { font-size: 13px; font-weight: 600; }
+    .signal-meta { margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .signal-meta b { color: var(--aqua); font-weight: 500; }
+    .signal-days { color: var(--orange); text-align: right; font: 500 18px "DM Mono", monospace; }
+    .signal-days small { display: block; color: var(--muted); font: 9px "Noto Sans SC", sans-serif; }
+    .archived-title { margin: 28px 0 10px; color: var(--muted); font: 10px "DM Mono", monospace; letter-spacing: .1em; }
+    .archived { padding: 12px 14px; background: var(--panel); color: var(--muted); font-size: 11px; }
+    .archived + .archived { margin-top: 4px; }
+    .archived span { float: right; color: var(--line); }
+
+    .constellation { position: relative; min-height: 308px; margin-top: 27px; background: var(--panel); border: 1px solid var(--line); overflow: hidden; }
+    .constellation::before { content: ""; position: absolute; left: 24px; right: 24px; top: 50%; height: 1px; background: var(--line); transform: rotate(-10deg); box-shadow: 0 70px 0 var(--line), 0 -70px 0 var(--line); }
+    .person-node { position: absolute; z-index: 1; display: grid; place-items: center; width: 72px; height: 72px; border: 1px solid var(--violet); border-radius: 50%; background: var(--night); color: var(--text); text-align: center; font-size: 11px; }
+    .person-node strong { display: block; color: var(--violet); font: 500 15px "DM Mono", monospace; }
+    .person-node span { display: block; margin-top: 3px; color: var(--muted); font-size: 9px; }
+    .person-node.main { width: 88px; height: 88px; left: 50%; top: 50%; transform: translate(-50%, -50%); border-color: var(--aqua); }
+    .person-node.main strong { color: var(--aqua); }
+    .person-node.p1 { left: 23px; top: 31px; }
+    .person-node.p2 { right: 22px; top: 27px; }
+    .person-node.p3 { left: 27px; bottom: 25px; }
+    .person-node.p4 { right: 20px; bottom: 23px; }
+    .people-caption { position: absolute; left: 0; right: 0; bottom: 9px; color: var(--muted); font: 9px "DM Mono", monospace; text-align: center; }
+    .relationship-list { display: grid; gap: 7px; margin-top: 18px; }
+    .relationship-row { display: flex; align-items: center; gap: 10px; min-height: 55px; padding: 8px 11px; background: var(--panel); }
+    .relation-dot { width: 9px; height: 9px; border: 2px solid var(--violet); border-radius: 50%; }
+    .relationship-row strong { font-size: 12px; }
+    .relationship-row span { margin-left: auto; color: var(--muted); font: 10px "DM Mono", monospace; }
+    .relationship-row b { color: var(--orange); font: 500 13px "DM Mono", monospace; }
+
+    .history-filter { display: flex; gap: 6px; margin-top: 25px; overflow-x: auto; scrollbar-width: none; }
+    .history-filter::-webkit-scrollbar { display: none; }
+    .filter { flex: 0 0 auto; min-height: 36px; padding: 0 12px; border: 1px solid var(--line); background: transparent; color: var(--muted); font-size: 10px; }
+    .filter.current { color: var(--aqua); border-color: var(--aqua); }
+    .log { position: relative; margin-top: 18px; padding-left: 26px; }
+    .log::before { content: ""; position: absolute; left: 5px; top: 7px; bottom: 8px; width: 1px; background: var(--line); }
+    .log-entry { position: relative; min-height: 92px; padding: 0 0 22px 15px; }
+    .log-entry::before { content: ""; position: absolute; left: -25px; top: 3px; width: 10px; height: 10px; border: 2px solid var(--violet); border-radius: 50%; background: var(--night); }
+    .log-entry.closed::before { border-color: var(--pink); }
+    .log-date { color: var(--aqua); font: 10px "DM Mono", monospace; }
+    .log-entry h2 { margin: 7px 0 3px; font-size: 14px; }
+    .log-entry p { margin: 0; color: var(--muted); font-size: 10px; }
+    .log-state { display: inline-block; margin-top: 9px; padding: 3px 6px; background: rgba(112,226,208,.1); color: var(--aqua); font: 9px "DM Mono", monospace; }
+    .log-state.closed { background: rgba(237,120,148,.1); color: var(--pink); }
+
+    .bottom-nav { display: grid; grid-template-columns: repeat(3, 1fr); padding: 8px 10px calc(8px + env(safe-area-inset-bottom)); border-top: 1px solid var(--line); background: var(--night); }
+    .tab { min-height: 49px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 10px; }
+    .tab::before { content: ""; display: block; width: 6px; height: 6px; margin: 0 auto 7px; border: 1px solid var(--muted); border-radius: 50%; }
+    .tab[aria-selected="true"] { color: var(--aqua); }
+    .tab[aria-selected="true"]::before { border-color: var(--aqua); background: var(--aqua); box-shadow: 0 0 10px rgba(112,226,208,.8); }
+    @media (min-width: 600px) { body { padding: 24px 0; } .app { min-height: calc(100dvh - 48px); border-radius: 26px; box-shadow: 0 20px 70px rgba(0,0,0,.4); } }
+    @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <main class="screen" id="screen-reminders" role="tabpanel" aria-labelledby="tab-reminders">
+      <header class="header"><div><h1>提醒</h1><small>CARE CONSTELLATION / 2026.04.27</small></div><div class="header-code">SYNC · OK</div></header>
+      <p class="eyebrow">TODAY'S ORBIT</p><h2 class="page-title">有一颗心意<br>正在靠近</h2><p class="page-desc">把每个重要日子当作星点，距离越近，信号越亮。</p>
+      <section class="orbit-card"><div class="orbit-center"><div><strong>3</strong><span>天后 · 妈妈生日</span></div></div><div class="orbit-node node-mom"><i>妈</i><strong>03D</strong></div><div class="orbit-node node-wife"><i>妻</i><strong>07D</strong></div><div class="orbit-node node-dad"><i>父</i><strong>55D</strong></div><div class="orbit-node node-holiday"><i>节</i><strong>53D</strong></div><div class="orbit-caption">距离中心越近，越值得现在准备</div></section>
+      <div class="section-title"><h2>信号队列</h2><span>05 ACTIVE</span></div>
+      <div class="signal-list">
+        <article class="signal urgent"><time class="signal-date"><strong>04.30</strong>THU</time><div><div class="signal-name">妈妈</div><div class="signal-meta"><b>生日</b> / 母亲</div></div><div class="signal-days">03<small>DAYS</small></div></article>
+        <article class="signal"><time class="signal-date"><strong>05.04</strong>MON</time><div><div class="signal-name">妻子</div><div class="signal-meta"><b>结婚纪念日</b> / 妻子</div></div><div class="signal-days">07<small>DAYS</small></div></article>
+        <article class="signal"><time class="signal-date"><strong>05.10</strong>SUN</time><div><div class="signal-name">妈妈</div><div class="signal-meta"><b>母亲节</b> / 自动关联</div></div><div class="signal-days">13<small>DAYS</small></div></article>
+        <article class="signal off"><time class="signal-date"><strong>06.11</strong>THU</time><div><div class="signal-name">老同学李明</div><div class="signal-meta">生日 / 提醒已关闭</div></div><div class="signal-days">45<small>DAYS</small></div></article>
+        <article class="signal"><time class="signal-date"><strong>06.19</strong>FRI</time><div><div class="signal-name">端午节</div><div class="signal-meta"><b>纯节日</b> / 未关联联系人</div></div><div class="signal-days">53<small>DAYS</small></div></article>
+      </div>
+      <div class="archived-title">ARCHIVED / 已过期</div><div class="archived">女儿小月 · 儿童节 <span>04.10</span></div><div class="archived">老王 · 入职纪念日 <span>03.20</span></div>
+    </main>
+
+    <main class="screen" id="screen-contacts" role="tabpanel" aria-labelledby="tab-contacts" hidden>
+      <header class="header"><div><h1>联系人</h1><small>RELATIONSHIP MAP / 05 NODES</small></div><div class="header-code">LOCAL</div></header>
+      <p class="eyebrow">YOUR CONSTELLATION</p><h2 class="page-title">重要的人<br>彼此有光</h2><p class="page-desc">关系不是标签，而是每个提醒为什么值得发生的坐标。</p>
+      <section class="constellation"><div class="person-node main"><div><strong>我</strong><span>心意中心</span></div></div><div class="person-node p1"><div><strong>妈</strong><span>母亲</span></div></div><div class="person-node p2"><div><strong>妻</strong><span>妻子</span></div></div><div class="person-node p3"><div><strong>父</strong><span>父亲</span></div></div><div class="person-node p4"><div><strong>月</strong><span>女儿</span></div></div><div class="people-caption">5 CONTACTS · 8 IMPORTANT DAYS</div></section>
+      <div class="section-title"><h2>关系信号</h2><span>按最近日子</span></div>
+      <div class="relationship-list"><div class="relationship-row"><i class="relation-dot"></i><strong>妈妈 · 母亲</strong><span>生日</span><b>03D</b></div><div class="relationship-row"><i class="relation-dot"></i><strong>妻子 · 妻子</strong><span>结婚纪念日</span><b>07D</b></div><div class="relationship-row"><i class="relation-dot"></i><strong>老同学李明 · 大学室友</strong><span>生日</span><b>45D</b></div><div class="relationship-row"><i class="relation-dot"></i><strong>爸爸 · 父亲</strong><span>父亲节</span><b>55D</b></div><div class="relationship-row"><i class="relation-dot"></i><strong>女儿小月 · 女儿</strong><span>生日</span><b>120D</b></div></div>
+    </main>
+
+    <main class="screen" id="screen-history" role="tabpanel" aria-labelledby="tab-history" hidden>
+      <header class="header"><div><h1>历史</h1><small>MEMORY LOG / LOCAL ARCHIVE</small></div><div class="header-code">05 LOGS</div></header>
+      <p class="eyebrow">REWIND</p><h2 class="page-title">已经发生的<br>心意信号</h2><p class="page-desc">每一次提醒都是一条留下来的轨迹。关闭提醒的日子，也只记录事实。</p>
+      <div class="history-filter"><button class="filter current">全部</button><button class="filter">2026</button><button class="filter">2025</button></div>
+      <div class="log"><article class="log-entry closed"><time class="log-date">2026.04.20 / LOG 05</time><h2>邻居张阿姨 · 妇女节</h2><p>邻居 · 提醒已关闭</p><span class="log-state closed">CONTENT EMPTY / 内容未生成</span></article><article class="log-entry"><time class="log-date">2026.03.15 / LOG 04</time><h2>爸爸 · 生日</h2><p>父亲</p><span class="log-state">CONTENT SAVED / 内容已保存</span></article><article class="log-entry"><time class="log-date">2026.02.14 / LOG 03</time><h2>妻子 · 情人节</h2><p>妻子</p><span class="log-state">CONTENT SAVED / 内容已保存</span></article><article class="log-entry"><time class="log-date">2026.01.18 / LOG 02</time><h2>妈妈 · 生日</h2><p>母亲</p><span class="log-state">CONTENT SAVED / 内容已保存</span></article><article class="log-entry"><time class="log-date">2025.12.25 / LOG 01</time><h2>老王 · 入职纪念日</h2><p>前同事</p><span class="log-state">CONTENT SAVED / 内容已保存</span></article></div>
+    </main>
+    <nav class="bottom-nav" role="tablist" aria-label="主导航"><button class="tab" id="tab-reminders" role="tab" aria-selected="true" aria-controls="screen-reminders" data-screen="reminders">提醒</button><button class="tab" id="tab-contacts" role="tab" aria-selected="false" aria-controls="screen-contacts" data-screen="contacts">联系人</button><button class="tab" id="tab-history" role="tab" aria-selected="false" aria-controls="screen-history" data-screen="history">历史</button></nav>
+  </div>
+  <script>
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    const screens = [...document.querySelectorAll('[role="tabpanel"]')];
+    tabs.forEach(tab => tab.addEventListener('click', () => { tabs.forEach(item => item.setAttribute('aria-selected', String(item === tab))); screens.forEach(screen => { screen.hidden = screen.id !== `screen-${tab.dataset.screen}`; }); }));
+  </script>
+</body>
+</html>

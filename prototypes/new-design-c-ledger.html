@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>AI 心意管家 · 日程票据</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Serif:wght@400;500;600;700&family=Noto+Serif+SC:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --desk: #dfe6ec;
+      --paper: #fffefa;
+      --paper-dark: #f1f4f5;
+      --ink: #1b2731;
+      --muted: #6c7882;
+      --line: #c9d1d7;
+      --blue: #315b96;
+      --blue-pale: #e4ebf5;
+      --red: #c14942;
+      --red-pale: #f7e4e1;
+      --yellow: #e1b94e;
+      --yellow-pale: #fff5cc;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { min-height: 100vh; background: var(--desk); color: var(--ink); font-family: "Noto Serif SC", "Songti SC", serif; -webkit-font-smoothing: antialiased; }
+    button { font: inherit; }
+    button:focus-visible { outline: 3px solid var(--red); outline-offset: 3px; }
+    .app { width: min(100%, 430px); min-height: 100dvh; margin: 0 auto; display: flex; flex-direction: column; background: var(--paper); overflow: hidden; }
+    .screen { flex: 1; min-height: 0; overflow: auto; padding: 19px 17px 28px; scrollbar-width: none; }
+    .screen::-webkit-scrollbar { display: none; }
+    .screen[hidden] { display: none; }
+    .topline { display: flex; align-items: center; justify-content: space-between; padding-bottom: 13px; border-bottom: 2px solid var(--ink); }
+    .brand { display: flex; gap: 9px; align-items: center; }
+    .brand-mark { display: grid; place-items: center; width: 29px; height: 29px; background: var(--blue); color: white; font: 600 13px "IBM Plex Mono", monospace; }
+    .brand h1 { margin: 0; font: 600 17px "IBM Plex Serif", serif; letter-spacing: .02em; }
+    .top-date { color: var(--muted); font: 10px "IBM Plex Mono", monospace; }
+    .heading { margin: 27px 0 19px; }
+    .heading small { display: block; margin-bottom: 8px; color: var(--blue); font: 500 11px "IBM Plex Mono", monospace; }
+    .heading h2 { margin: 0; font: 600 29px/1.18 "Noto Serif SC", serif; letter-spacing: -.06em; }
+    .heading p { margin: 10px 0 0; color: var(--muted); font-size: 12px; line-height: 1.8; }
+
+    .sorting-strip { display: flex; align-items: center; justify-content: space-between; margin: 18px 0 8px; padding: 10px 12px; background: var(--paper-dark); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+    .sorting-strip strong { color: var(--blue); font: 500 11px "IBM Plex Mono", monospace; }
+    .sorting-strip span { color: var(--muted); font-size: 10px; }
+    .day-group { margin-top: 19px; }
+    .day-heading { display: flex; align-items: baseline; gap: 9px; margin-bottom: 7px; padding-left: 2px; }
+    .day-heading strong { color: var(--red); font: 600 20px "IBM Plex Mono", monospace; }
+    .day-heading span { color: var(--muted); font-size: 11px; }
+    .ticket { display: grid; grid-template-columns: 43px minmax(0, 1fr) 54px; gap: 11px; align-items: center; min-height: 78px; padding: 10px 11px; border: 1px solid var(--line); background: var(--paper); }
+    .ticket + .ticket { border-top: 0; }
+    .ticket.off { color: var(--muted); background: #f6f7f7; }
+    .ticket-mark { display: grid; place-items: center; width: 35px; height: 35px; border: 1px solid var(--blue); color: var(--blue); font: 600 14px "IBM Plex Serif", serif; }
+    .ticket.off .ticket-mark { border-color: var(--line); color: var(--muted); }
+    .ticket h3 { margin: 0; font: 600 14px "Noto Serif SC", serif; }
+    .ticket p { margin: 4px 0 0; color: var(--muted); font-size: 10px; line-height: 1.45; }
+    .ticket p b { color: var(--blue); font-weight: 500; }
+    .ticket.off p b { color: var(--muted); }
+    .ticket-count { color: var(--red); text-align: right; font: 500 16px "IBM Plex Mono", monospace; }
+    .ticket-count small { display: block; margin-top: 3px; color: var(--muted); font: 9px "Noto Serif SC", serif; }
+    .ticket-holiday .ticket-mark { border-color: var(--yellow); color: #876e17; background: var(--yellow-pale); }
+    .expired { margin-top: 25px; padding: 14px 12px 0; background: var(--paper-dark); border-top: 3px solid var(--red); }
+    .expired h3 { margin: 0; color: var(--red); font: 600 13px "Noto Serif SC", serif; }
+    .expired p { margin: 4px 0 11px; color: var(--muted); font-size: 10px; }
+    .expired-row { display: flex; justify-content: space-between; gap: 10px; padding: 11px 0; border-top: 1px solid var(--line); font-size: 11px; }
+    .expired-row span { color: var(--muted); font: 10px "IBM Plex Mono", monospace; }
+
+    .index-bar { display: flex; gap: 6px; margin: 18px 0 17px; padding: 9px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+    .index-bar::-webkit-scrollbar { display: none; }
+    .index-letter { flex: 0 0 auto; min-width: 34px; min-height: 35px; border: 1px solid var(--line); background: var(--paper); color: var(--muted); font: 11px "IBM Plex Mono", monospace; }
+    .index-letter.current { background: var(--blue); border-color: var(--blue); color: white; }
+    .roster { display: grid; gap: 0; }
+    .roster-section { display: grid; grid-template-columns: 31px minmax(0, 1fr); gap: 12px; padding: 16px 0; border-bottom: 1px solid var(--line); }
+    .roster-letter { color: var(--red); font: 600 18px "IBM Plex Mono", monospace; }
+    .roster-person { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; gap: 10px; align-items: center; }
+    .roster-person + .roster-person { margin-top: 14px; padding-top: 14px; border-top: 1px dotted var(--line); }
+    .portrait { display: grid; place-items: center; width: 40px; height: 40px; background: var(--blue-pale); color: var(--blue); font: 600 15px "Noto Serif SC", serif; }
+    .roster-person h3 { margin: 0; font: 600 13px "Noto Serif SC", serif; }
+    .roster-person p { margin: 3px 0 0; color: var(--muted); font-size: 10px; }
+    .person-next { color: var(--red); text-align: right; font: 500 15px "IBM Plex Mono", monospace; }
+    .person-next small { display: block; color: var(--muted); font: 9px "Noto Serif SC", serif; }
+    .date-row { display: flex; flex-wrap: wrap; gap: 5px; margin: 10px 0 0 50px; }
+    .date-tag { padding: 4px 6px; border: 1px solid var(--line); color: var(--ink); font-size: 9px; }
+    .date-tag.auto { border-color: #9db3ce; background: var(--blue-pale); color: var(--blue); }
+
+    .record-intro { display: grid; grid-template-columns: 1fr auto; gap: 15px; align-items: end; margin: 23px 0 19px; padding: 15px 14px; border: 1px solid var(--line); background: var(--paper-dark); }
+    .record-intro strong { display: block; color: var(--blue); font: 500 32px "IBM Plex Mono", monospace; }
+    .record-intro p { margin: 7px 0 0; color: var(--muted); font-size: 11px; line-height: 1.65; }
+    .record-stamp { width: 55px; height: 55px; display: grid; place-items: center; border: 1px solid var(--red); border-radius: 50%; color: var(--red); font: 10px "IBM Plex Mono", monospace; text-align: center; transform: rotate(-9deg); }
+    .register { border: 1px solid var(--ink); }
+    .register-head, .register-row { display: grid; grid-template-columns: 78px minmax(0, 1fr) 62px; gap: 9px; align-items: center; }
+    .register-head { min-height: 33px; padding: 0 10px; background: var(--ink); color: white; font: 10px "IBM Plex Mono", monospace; }
+    .register-row { min-height: 83px; padding: 10px; border-top: 1px solid var(--line); }
+    .register-row.closed { background: var(--red-pale); }
+    .register-date { color: var(--blue); font: 10px/1.4 "IBM Plex Mono", monospace; }
+    .register-date strong { display: block; font-size: 12px; }
+    .register-main h3 { margin: 0; font: 600 12px "Noto Serif SC", serif; }
+    .register-main p { margin: 4px 0 0; color: var(--muted); font-size: 9px; line-height: 1.45; }
+    .register-status { color: var(--blue); text-align: right; font-size: 9px; line-height: 1.45; }
+    .register-status::before { content: "●"; display: block; margin-bottom: 3px; color: var(--blue); font-size: 8px; }
+    .register-row.closed .register-status { color: var(--red); }
+    .register-row.closed .register-status::before { color: var(--red); content: "×"; font: 15px "IBM Plex Mono", monospace; }
+    .register-foot { padding: 11px 10px; border-top: 1px solid var(--line); color: var(--muted); font-size: 9px; }
+
+    .bottom-nav { display: grid; grid-template-columns: repeat(3, 1fr); flex: 0 0 auto; padding: 7px 9px calc(7px + env(safe-area-inset-bottom)); border-top: 1px solid var(--ink); background: var(--paper); }
+    .tab { min-height: 49px; border: 0; background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; }
+    .tab::before { content: ""; display: block; width: 14px; height: 14px; margin: 0 auto 5px; border: 1px solid var(--muted); }
+    .tab[aria-selected="true"] { color: var(--blue); font-weight: 600; }
+    .tab[aria-selected="true"]::before { border-color: var(--red); background: var(--yellow); box-shadow: inset 0 0 0 3px var(--paper); }
+    @media (min-width: 600px) { body { padding: 24px 0; } .app { min-height: calc(100dvh - 48px); border-radius: 4px; box-shadow: 0 18px 55px rgba(34,49,63,.18); } }
+    @media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto !important; transition: none !important; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <main class="screen" id="screen-reminders" role="tabpanel" aria-labelledby="tab-reminders">
+      <header class="topline"><div class="brand"><div class="brand-mark">心</div><h1>心意日程</h1></div><time class="top-date">2026.04.27</time></header>
+      <section class="heading"><small>今天先看这里</small><h2>下一张票据<br>是妈妈的生日</h2><p>按日期排好，打开就知道该为谁准备什么。</p></section>
+      <div class="sorting-strip"><strong>05 张生效票据</strong><span>日期顺序 · 由近到远</span></div>
+      <section class="day-group"><div class="day-heading"><strong>04.30</strong><span>星期四 · 还有 3 天</span></div><article class="ticket"><div class="ticket-mark">妈</div><div><h3>妈妈 · 生日</h3><p><b>母亲</b> · 手动设定 · 爱养花，今年刚退休</p></div><div class="ticket-count">03<small>天后</small></div></article></section>
+      <section class="day-group"><div class="day-heading"><strong>05.04</strong><span>星期一 · 还有 7 天</span></div><article class="ticket"><div class="ticket-mark">妻</div><div><h3>妻子 · 结婚纪念日</h3><p><b>妻子</b> · 手动设定 · 喜欢烘焙和旅行</p></div><div class="ticket-count">07<small>天后</small></div></article></section>
+      <section class="day-group"><div class="day-heading"><strong>05.10</strong><span>星期日 · 还有 13 天</span></div><article class="ticket"><div class="ticket-mark">妈</div><div><h3>妈妈 · 母亲节</h3><p><b>母亲</b> · 身份自动关联</p></div><div class="ticket-count">13<small>天后</small></div></article></section>
+      <section class="day-group"><div class="day-heading"><strong>06.11</strong><span>星期四 · 还有 45 天</span></div><article class="ticket off"><div class="ticket-mark">李</div><div><h3>老同学李明 · 生日</h3><p>大学室友 · 提醒已关闭</p></div><div class="ticket-count">45<small>已关闭</small></div></article></section>
+      <section class="day-group"><div class="day-heading"><strong>06.19</strong><span>星期五 · 还有 53 天</span></div><article class="ticket ticket-holiday"><div class="ticket-mark">节</div><div><h3>端午节</h3><p><b>纯节日</b> · 未关联联系人</p></div><div class="ticket-count">53<small>天后</small></div></article></section>
+      <section class="expired"><h3>已过期 · 放在最后</h3><p>仅提醒一次的日子会在到期后移入这里。</p><div class="expired-row"><div>女儿小月 · 儿童节</div><span>2026.04.10</span></div><div class="expired-row"><div>老王 · 入职纪念日</div><span>2026.03.20</span></div></section>
+    </main>
+
+    <main class="screen" id="screen-contacts" role="tabpanel" aria-labelledby="tab-contacts" hidden>
+      <header class="topline"><div class="brand"><div class="brand-mark">册</div><h1>联系人名册</h1></div><span class="top-date">05 人 · 08 日子</span></header>
+      <section class="heading"><small>通讯录索引</small><h2>先找到人<br>再看要记得的日子</h2><p>每个人都可以拥有多个日子，手动设定和身份关联会分开标注。</p></section>
+      <nav class="index-bar" aria-label="联系人索引"><button class="index-letter current">全部</button><button class="index-letter">妈</button><button class="index-letter">妻</button><button class="index-letter">爸</button><button class="index-letter">女</button><button class="index-letter">老</button></nav>
+      <div class="roster">
+        <section class="roster-section"><div class="roster-letter">家</div><div><article class="roster-person"><div class="portrait">妈</div><div><h3>妈妈</h3><p>母亲 · 爱养花，今年刚退休</p></div><div class="person-next">03<small>天后</small></div></article><div class="date-row"><span class="date-tag">生日 · 04.30</span><span class="date-tag auto">母亲节 · 自动关联</span></div></div></section>
+        <section class="roster-section"><div class="roster-letter">家</div><div><article class="roster-person"><div class="portrait">妻</div><div><h3>妻子</h3><p>妻子 · 喜欢烘焙和旅行</p></div><div class="person-next">07<small>天后</small></div></article><div class="date-row"><span class="date-tag">结婚纪念日 · 05.04</span><span class="date-tag auto">妇女节 · 自动关联</span></div></div></section>
+        <section class="roster-section"><div class="roster-letter">父</div><div><article class="roster-person"><div class="portrait">父</div><div><h3>爸爸</h3><p>父亲 · 退休教师，爱下棋钓鱼</p></div><div class="person-next">55<small>天后</small></div></article><div class="date-row"><span class="date-tag auto">父亲节 · 自动关联</span></div></div></section>
+        <section class="roster-section"><div class="roster-letter">女</div><div><article class="roster-person"><div class="portrait">月</div><div><h3>女儿小月</h3><p>女儿 · 小学三年级，学钢琴</p></div><div class="person-next">120<small>天后</small></div></article><div class="date-row"><span class="date-tag">生日 · 08.25</span></div></div></section>
+        <section class="roster-section"><div class="roster-letter">老</div><div><article class="roster-person"><div class="portrait">李</div><div><h3>老同学李明</h3><p>大学室友 · 爱打篮球，程序员</p></div><div class="person-next">45<small>天后</small></div></article><div class="date-row"><span class="date-tag">生日 · 06.11</span></div></div></section>
+      </div>
+    </main>
+
+    <main class="screen" id="screen-history" role="tabpanel" aria-labelledby="tab-history" hidden>
+      <header class="topline"><div class="brand"><div class="brand-mark">簿</div><h1>心意登记簿</h1></div><span class="top-date">共 05 条记录</span></header>
+      <section class="heading"><small>历史记录</small><h2>那些已经发生的<br>心意日子</h2><p>按发生日期倒序保存。联系人后来被删除，也不会影响这里的快照。</p></section>
+      <section class="record-intro"><div><strong>05</strong><p>已过提醒日<br>保存状态清晰可见</p></div><div class="record-stamp">已归档<br>2026</div></section>
+      <section class="register" aria-label="历史记录登记表"><div class="register-head"><span>日期</span><span>日子与联系人</span><span>状态</span></div><article class="register-row closed"><time class="register-date"><strong>04.20</strong>2026</time><div class="register-main"><h3>邻居张阿姨 · 妇女节</h3><p>邻居 · 提醒已关闭</p></div><div class="register-status">内容未生成</div></article><article class="register-row"><time class="register-date"><strong>03.15</strong>2026</time><div class="register-main"><h3>爸爸 · 生日</h3><p>父亲</p></div><div class="register-status">内容已保存</div></article><article class="register-row"><time class="register-date"><strong>02.14</strong>2026</time><div class="register-main"><h3>妻子 · 情人节</h3><p>妻子</p></div><div class="register-status">内容已保存</div></article><article class="register-row"><time class="register-date"><strong>01.18</strong>2026</time><div class="register-main"><h3>妈妈 · 生日</h3><p>母亲</p></div><div class="register-status">内容已保存</div></article><article class="register-row"><time class="register-date"><strong>12.25</strong>2025</time><div class="register-main"><h3>老王 · 入职纪念日</h3><p>前同事</p></div><div class="register-status">内容已保存</div></article><div class="register-foot">历史内容使用当时的联系人快照，不随联系人列表的变化而消失。</div></section>
+    </main>
+
+    <nav class="bottom-nav" role="tablist" aria-label="主导航"><button class="tab" id="tab-reminders" role="tab" aria-selected="true" aria-controls="screen-reminders" data-screen="reminders">提醒</button><button class="tab" id="tab-contacts" role="tab" aria-selected="false" aria-controls="screen-contacts" data-screen="contacts">联系人</button><button class="tab" id="tab-history" role="tab" aria-selected="false" aria-controls="screen-history" data-screen="history">历史</button></nav>
+  </div>
+  <script>
+    const tabs = [...document.querySelectorAll('[role="tab"]')];
+    const screens = [...document.querySelectorAll('[role="tabpanel"]')];
+    tabs.forEach(tab => tab.addEventListener('click', () => { tabs.forEach(item => item.setAttribute('aria-selected', String(item === tab))); screens.forEach(screen => { screen.hidden = screen.id !== `screen-${tab.dataset.screen}`; }); }));
+  </script>
+</body>
+</html>
