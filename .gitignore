@@ -1,0 +1,11 @@
+# Claude Code 本地个人配置（含本机路径与权限清单，不共享）
+.claude/settings.local.json
+
+# 操作系统
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# 编辑器
+.vscode/
+.idea/
