@@ -1,0 +1,515 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 心意管家 — 素笺</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #FAF7F2;
+    --paper-lines: #F2EDE5;
+    --ink: #2C2826;
+    --ink-soft: #5E5954;
+    --ink-muted: #9E9890;
+    --accent: #4A6572;
+    --accent-soft: #7B949E;
+    --danger: #8B5E5E;
+    --rule: #E8E0D5;
+    --rule-strong: #D4CBC0;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    display: flex; justify-content: center; align-items: center;
+    min-height: 100vh; background: #EBE5DA;
+    font-family: 'Noto Serif SC', serif; -webkit-font-smoothing: antialiased;
+  }
+  .phone {
+    width: 375px; height: 812px;
+    background: var(--paper);
+    border-radius: 0; overflow: hidden; position: relative;
+    display: flex; flex-direction: column;
+    box-shadow: 0 12px 48px rgba(0,0,0,.12);
+  }
+
+  /* 纸纹质感：淡横线 */
+  .paper-lines {
+    position: absolute; inset: 0; pointer-events: none; z-index: 0;
+    background: repeating-linear-gradient(
+      to bottom,
+      transparent,
+      transparent 27px,
+      var(--paper-lines) 27px,
+      var(--paper-lines) 28px
+    );
+  }
+
+  .status-bar {
+    height: 40px; display: flex; align-items: center; justify-content: space-between;
+    padding: 0 20px; font-size: 11px; color: var(--ink-muted); font-weight: 400;
+    position: relative; z-index: 1;
+  }
+
+  .header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    padding: 8px 24px 0; position: relative; z-index: 1;
+  }
+  .header-title {
+    font-size: 22px; font-weight: 400; color: var(--ink);
+    letter-spacing: .04em;
+    /* 手写感下划线 */
+    border-bottom: 2px solid var(--rule-strong);
+    padding-bottom: 4px;
+  }
+  .header-action {
+    font-size: 13px; color: var(--accent-soft); text-decoration: none;
+    font-weight: 400; cursor: pointer; background: none; border: none;
+    font-family: inherit;
+  }
+
+  /* 主内容 */
+  .content { flex: 1; overflow-y: auto; padding: 0 24px 8px; position: relative; z-index: 1; }
+
+  /* 分区标签 — 像笔记里的页眉 */
+  .sect-label {
+    font-size: 11px; color: var(--ink-muted); font-weight: 400;
+    padding: 20px 0 10px; letter-spacing: .06em;
+    border-bottom: 1px dotted var(--rule);
+  }
+
+  /* 条目 — 左引注式布局 */
+  .entry {
+    display: flex; align-items: flex-start;
+    padding: 16px 0; border-bottom: 1px solid var(--paper-lines);
+    position: relative; transition: background .2s;
+  }
+  .entry:hover { background: rgba(74,101,114,.03); margin: 0 -24px; padding-left: 24px; padding-right: 24px; }
+  .entry.disabled { opacity: .45; }
+  .entry.expired { opacity: .5; }
+
+  /* 左侧日期栏 — 类似手帐的时间注记 */
+  .entry-margin {
+    width: 48px; flex-shrink: 0; text-align: right;
+    padding-right: 16px; padding-top: 2px;
+    border-right: 1px solid var(--rule);
+    margin-right: 16px; min-height: 100%;
+  }
+  .entry-days {
+    font-size: 28px; font-weight: 300; color: var(--ink);
+    line-height: 1; letter-spacing: -.02em;
+    display: block;
+  }
+  .entry-days.urgent { color: var(--danger); font-weight: 400; }
+  .entry-days-label {
+    font-size: 9px; color: var(--ink-muted); font-weight: 400;
+    margin-top: 2px; display: block;
+  }
+  .entry-days.expired { font-size: 12px; color: var(--ink-muted); font-weight: 400; }
+
+  /* 右侧内容 */
+  .entry-body { flex: 1; padding-top: 2px; }
+  .entry-name {
+    font-size: 16px; font-weight: 500; color: var(--ink);
+    line-height: 1.4;
+  }
+  .entry-rel {
+    font-size: 12px; color: var(--ink-soft); font-weight: 400;
+    margin-top: 1px;
+  }
+  .entry-kind {
+    font-size: 11px; color: var(--ink-muted); font-weight: 400;
+    margin-top: 6px; display: flex; align-items: center; gap: 10px;
+  }
+
+  /* 开关 — 极简 */
+  .entry-toggle {
+    width: 34px; height: 20px; border-radius: 3px;
+    background: var(--accent-soft); border: none; cursor: pointer;
+    position: relative; margin-left: auto;
+    transition: background .2s;
+  }
+  .entry-toggle::after {
+    content: ''; position: absolute; top: 2px; left: 2px;
+    width: 16px; height: 16px; border-radius: 2px;
+    background: white; transition: transform .2s;
+  }
+  .entry-toggle.off {
+    background: var(--rule);
+  }
+  .entry-toggle.off::after {
+    transform: translateX(14px); background: var(--ink-muted);
+  }
+
+  /* 联系人 — 同样的左引注布局但无日期 */
+  .contact-entry {
+    display: flex; align-items: center;
+    padding: 14px 0; border-bottom: 1px solid var(--paper-lines);
+    cursor: pointer; transition: background .2s;
+  }
+  .contact-entry:hover {
+    background: rgba(74,101,114,.03); margin: 0 -24px; padding-left: 24px; padding-right: 24px;
+  }
+  .contact-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: var(--paper-lines); display: flex;
+    align-items: center; justify-content: center;
+    font-size: 20px; color: var(--accent);
+    flex-shrink: 0; margin-right: 14px;
+  }
+  .contact-info { flex: 1; }
+  .contact-name {
+    font-size: 15px; font-weight: 500; color: var(--ink);
+    line-height: 1.4;
+  }
+  .contact-rel {
+    font-size: 12px; color: var(--ink-soft); font-weight: 400;
+    margin-top: 1px;
+  }
+  .contact-next {
+    text-align: right; font-size: 11px; color: var(--ink-muted);
+    line-height: 1.4;
+  }
+  .contact-next strong {
+    display: block; font-size: 14px; font-weight: 500; color: var(--danger);
+    margin-top: 2px;
+  }
+
+  /* 历史 */
+  .hist-entry {
+    padding: 16px 0; border-bottom: 1px solid var(--paper-lines);
+    cursor: pointer; transition: background .2s;
+  }
+  .hist-entry:hover {
+    background: rgba(74,101,114,.03); margin: 0 -24px; padding-left: 24px; padding-right: 24px;
+  }
+  .hist-date {
+    font-size: 11px; color: var(--ink-muted); font-weight: 400;
+    margin-bottom: 4px; letter-spacing: .04em;
+  }
+  .hist-name {
+    font-size: 16px; font-weight: 500; color: var(--ink);
+  }
+  .hist-sub {
+    font-size: 13px; color: var(--ink-soft); font-weight: 400;
+  }
+  .hist-quote {
+    font-size: 12px; color: var(--ink-muted); font-style: italic;
+    line-height: 1.7; margin-top: 6px;
+    /* 像引用一样缩进 */
+    padding-left: 16px; border-left: 2px solid var(--rule);
+  }
+  .hist-tag {
+    display: inline-block; font-size: 9px; color: var(--accent-soft);
+    margin-top: 6px; font-weight: 400;
+    /* 像页码标注 */
+  }
+  .hist-entry.closed { opacity: .55; }
+
+  /* 空态 — 像一页空白的日记 */
+  .empty {
+    text-align: center; padding: 80px 20px;
+  }
+  .empty-sign {
+    font-size: 15px; color: var(--ink-muted); font-weight: 400;
+    margin-bottom: 24px; line-height: 1.8;
+  }
+  .empty-btn {
+    display: inline-block; padding: 0; color: var(--accent);
+    font-size: 14px; font-weight: 400; border: none;
+    background: none; cursor: pointer; font-family: inherit;
+    border-bottom: 1px solid var(--accent-soft);
+    padding-bottom: 2px; letter-spacing: .03em;
+  }
+
+  /* 底栏 — 极简 */
+  .tab-bar {
+    display: flex; height: 52px;
+    background: var(--paper); border-top: 1px solid var(--rule);
+    position: relative; z-index: 1;
+  }
+  .tab {
+    flex: 1; display: flex; align-items: center; justify-content: center;
+    border: none; background: none; cursor: pointer;
+    font-family: inherit; color: var(--ink-muted);
+    font-size: 13px; font-weight: 400;
+    transition: color .2s; letter-spacing: .04em;
+  }
+  .tab.active { color: var(--ink); font-weight: 500; }
+  /* 选中态 — 上横线 */
+  .tab.active::before {
+    content: ''; position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 20px; height: 2px; background: var(--accent);
+  }
+
+  /* 浮加号 */
+  .fab {
+    position: absolute; bottom: 66px; right: 24px;
+    width: 40px; height: 40px; border-radius: 50%;
+    background: var(--accent); color: #fff; border: none;
+    font-size: 22px; cursor: pointer; display: flex;
+    align-items: center; justify-content: center;
+    font-family: inherit; font-weight: 300;
+    box-shadow: 0 2px 12px rgba(74,101,114,.2);
+  }
+</style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="paper-lines"></div>
+
+  <!-- 提醒 Tab -->
+  <div id="tab-reminder">
+    <div class="status-bar">
+      <span>9 月 20 日 · 周六</span><span></span>
+    </div>
+    <div class="header">
+      <h1 class="header-title">提醒</h1>
+      <button class="header-action">设置</button>
+    </div>
+    <div class="content">
+      <div class="sect-label">—— 即将到来 ——</div>
+
+      <div class="entry">
+        <div class="entry-margin">
+          <span class="entry-days urgent">3</span>
+          <span class="entry-days-label">天后</span>
+        </div>
+        <div class="entry-body">
+          <div class="entry-name">妈妈</div>
+          <div class="entry-rel">母亲</div>
+          <div class="entry-kind">
+            生日
+            <button class="entry-toggle"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry">
+        <div class="entry-margin">
+          <span class="entry-days">7</span>
+          <span class="entry-days-label">天后</span>
+        </div>
+        <div class="entry-body">
+          <div class="entry-name">妻子</div>
+          <div class="entry-rel">妻子</div>
+          <div class="entry-kind">
+            结婚纪念日
+            <button class="entry-toggle"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry">
+        <div class="entry-margin">
+          <span class="entry-days">14</span>
+          <span class="entry-days-label">天后</span>
+        </div>
+        <div class="entry-body">
+          <div class="entry-name">妈妈</div>
+          <div class="entry-rel">母亲</div>
+          <div class="entry-kind">
+            母亲节
+            <button class="entry-toggle"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry">
+        <div class="entry-margin">
+          <span class="entry-days">21</span>
+          <span class="entry-days-label">天后</span>
+        </div>
+        <div class="entry-body">
+          <div class="entry-name">爸爸</div>
+          <div class="entry-rel">父亲</div>
+          <div class="entry-kind">
+            父亲节
+            <button class="entry-toggle"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="entry disabled">
+        <div class="entry-margin">
+          <span class="entry-days">45</span>
+          <span class="entry-days-label">天后</span>
+        </div>
+        <div class="entry-body">
+          <div class="entry-name">老同学李明</div>
+          <div class="entry-rel">大学室友</div>
+          <div class="entry-kind">
+            生日
+            <button class="entry-toggle off"></button>
+          </div>
+        </div>
+      </div>
+
+      <div class="sect-label">—— 已过期 ——</div>
+
+      <div class="entry expired">
+        <div class="entry-margin">
+          <span class="entry-days expired">已过期</span>
+        </div>
+        <div class="entry-body">
+          <div class="entry-name">女儿</div>
+          <div class="entry-rel">女儿</div>
+          <div class="entry-kind">儿童节 · 仅一次</div>
+        </div>
+      </div>
+
+      <div class="entry expired">
+        <div class="entry-margin">
+          <span class="entry-days expired">已过期</span>
+        </div>
+        <div class="entry-body">
+          <div class="entry-name">老王</div>
+          <div class="entry-rel">前同事</div>
+          <div class="entry-kind">入职纪念日 · 仅一次</div>
+        </div>
+      </div>
+
+      <div style="height: 16px;"></div>
+    </div>
+  </div>
+
+  <!-- 联系人 Tab -->
+  <div id="tab-contact" style="display:none;">
+    <div class="status-bar">
+      <span>9 月 20 日 · 周六</span><span></span>
+    </div>
+    <div class="header">
+      <h1 class="header-title">联系人</h1>
+      <button class="header-action">设置</button>
+    </div>
+    <div class="content" style="position:relative;">
+      <div class="contact-entry">
+        <div class="contact-avatar">妈</div>
+        <div class="contact-info">
+          <div class="contact-name">妈妈</div>
+          <div class="contact-rel">母亲</div>
+        </div>
+        <div class="contact-next">
+          生日 <strong>3 天后</strong>
+        </div>
+      </div>
+
+      <div class="contact-entry">
+        <div class="contact-avatar">妻</div>
+        <div class="contact-info">
+          <div class="contact-name">妻子</div>
+          <div class="contact-rel">妻子</div>
+        </div>
+        <div class="contact-next">
+          结婚纪念日 <strong>7 天后</strong>
+        </div>
+      </div>
+
+      <div class="contact-entry">
+        <div class="contact-avatar">爸</div>
+        <div class="contact-info">
+          <div class="contact-name">爸爸</div>
+          <div class="contact-rel">父亲</div>
+        </div>
+        <div class="contact-next">
+          生日 <strong>58 天后</strong>
+        </div>
+      </div>
+
+      <div class="contact-entry">
+        <div class="contact-avatar">月</div>
+        <div class="contact-info">
+          <div class="contact-name">女儿小月</div>
+          <div class="contact-rel">女儿</div>
+        </div>
+        <div class="contact-next">
+          生日 <strong>120 天后</strong>
+        </div>
+      </div>
+
+      <div class="contact-entry">
+        <div class="contact-avatar">李</div>
+        <div class="contact-info">
+          <div class="contact-name">老同学李明</div>
+          <div class="contact-rel">大学室友</div>
+        </div>
+        <div class="contact-next">
+          生日 <strong>45 天后</strong>
+        </div>
+      </div>
+
+      <button class="fab">＋</button>
+    </div>
+  </div>
+
+  <!-- 历史 Tab -->
+  <div id="tab-history" style="display:none;">
+    <div class="status-bar">
+      <span>9 月 20 日 · 周六</span><span></span>
+    </div>
+    <div class="header">
+      <h1 class="header-title">历史</h1>
+      <button class="header-action">设置</button>
+    </div>
+    <div class="content">
+      <div class="hist-entry">
+        <div class="hist-date">2026 年 9 月 15 日</div>
+        <div class="hist-name">妈妈</div>
+        <div class="hist-sub">母亲 · 生日</div>
+      </div>
+
+      <div class="hist-entry">
+        <div class="hist-date">2026 年 8 月 22 日</div>
+        <div class="hist-name">妻子</div>
+        <div class="hist-sub">妻子 · 七夕节</div>
+      </div>
+
+      <div class="hist-entry">
+        <div class="hist-date">2026 年 6 月 15 日</div>
+        <div class="hist-name">爸爸</div>
+        <div class="hist-sub">父亲 · 父亲节</div>
+      </div>
+
+      <div class="hist-entry">
+        <div class="hist-date">2026 年 5 月 20 日</div>
+        <div class="hist-name">老王</div>
+        <div class="hist-sub">前同事 · 入职纪念日</div>
+        <div class="hist-tag">仅一次</div>
+      </div>
+
+      <div class="hist-entry closed">
+        <div class="hist-date">2026 年 3 月 8 日</div>
+        <div class="hist-name">邻居张阿姨</div>
+        <div class="hist-sub">邻居 · 妇女节</div>
+        <div class="hist-quote">"仪式就是使某一天与其他日子不同，使某一时刻与其他时刻不同。"</div>
+        <div class="hist-tag">提醒已关闭</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 底栏 -->
+  <div class="tab-bar">
+    <button class="tab active" data-tab="reminder" style="position:relative;">提醒</button>
+    <button class="tab" data-tab="contact" style="position:relative;">联系人</button>
+    <button class="tab" data-tab="history" style="position:relative;">历史</button>
+  </div>
+</div>
+
+<script>
+  document.querySelectorAll('.tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      const target = tab.dataset.tab;
+      document.querySelectorAll('#tab-reminder, #tab-contact, #tab-history').forEach(c => c.style.display = 'none');
+      document.getElementById('tab-' + target).style.display = '';
+    });
+  });
+  document.querySelectorAll('.entry-toggle').forEach(btn => {
+    btn.addEventListener('click', function(e) { e.stopPropagation(); this.classList.toggle('off'); });
+  });
+</script>
+
+</body>
+</html>

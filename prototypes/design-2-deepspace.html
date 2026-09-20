@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI 心意管家 · 夜航星历</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --void: #080a0f;
+  --panel: #141922;
+  --panel-2: #1a202c;
+  --text: #f1f4f7;
+  --muted: #929cac;
+  --faint: #596473;
+  --line: #293240;
+  --signal: #62d6c2;
+  --warning: #f2b45f;
+  --danger: #e57978;
+  --white: #fff;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body {
+  min-height: 100vh; background: var(--void); color: var(--text);
+  font-family: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; }
+button:focus-visible { outline: 2px solid var(--warning); outline-offset: 3px; }
+.shell { min-height: 100dvh; display: flex; flex-direction: column; max-width: 1500px; margin: 0 auto; background: var(--void); }
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 28px; padding: 24px clamp(18px, 5vw, 72px); border-bottom: 1px solid var(--line); }
+.brand { display: flex; align-items: center; gap: 14px; }
+.brand-mark { width: 26px; height: 26px; border: 2px solid var(--signal); display: grid; place-items: center; color: var(--signal); font: 16px "Space Grotesk", sans-serif; }
+.brand h1 { margin: 0; font: 18px "Space Grotesk", "Noto Sans SC", sans-serif; letter-spacing: .04em; }
+.brand p { margin: 4px 0 0; color: var(--muted); font-size: 11px; }
+.system-readout { display: flex; gap: 20px; color: var(--muted); font: 11px "Space Grotesk", sans-serif; letter-spacing: .08em; }
+.system-readout strong { color: var(--signal); font-weight: 500; }
+.main { flex: 1; min-height: 0; overflow: auto; padding: 38px clamp(18px, 5vw, 72px) 48px; }
+.panel[hidden] { display: none; }
+.panel-head { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 30px; }
+.panel-kicker { margin: 0 0 9px; color: var(--signal); font: 11px "Space Grotesk", sans-serif; letter-spacing: .16em; text-transform: uppercase; }
+.panel-title { margin: 0; font: 54px/1 "Space Grotesk", "Noto Sans SC", sans-serif; letter-spacing: -.04em; }
+.panel-note { max-width: 420px; margin: 0; color: var(--muted); font-size: 12px; line-height: 1.75; text-align: right; }
+.reminder-console { display: grid; grid-template-columns: minmax(250px, .72fr) minmax(0, 1.55fr); gap: 26px; align-items: start; }
+.command-panel { padding: 26px; border: 1px solid var(--line); background: var(--panel); min-height: 290px; }
+.command-label { color: var(--muted); font: 11px "Space Grotesk", sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.command-number { margin: 38px 0 4px; color: var(--warning); font: 112px/.78 "Space Grotesk", sans-serif; letter-spacing: -.09em; }
+.command-unit { color: var(--muted); font-size: 13px; }
+.command-name { margin-top: 28px; font-size: 19px; font-weight: 600; }
+.command-detail { margin-top: 5px; color: var(--muted); font-size: 12px; }
+.command-line { display: flex; align-items: center; gap: 8px; margin-top: 28px; color: var(--signal); font: 11px "Space Grotesk", sans-serif; }
+.command-line::before { content: ""; width: 28px; height: 1px; background: var(--signal); }
+.radar { border-top: 1px solid var(--line); }
+.radar-head { display: flex; justify-content: space-between; align-items: center; padding: 0 0 12px; }
+.radar-head span { color: var(--muted); font: 11px "Space Grotesk", sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.sorts { display: flex; gap: 5px; }
+.sort-btn { min-height: 38px; padding: 6px 11px; border: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; }
+.sort-btn[aria-pressed="true"] { border-color: var(--signal); color: var(--signal); background: rgba(98,214,194,.08); }
+.radar-row { display: grid; grid-template-columns: 74px 12px minmax(0, 1fr) auto; gap: 14px; align-items: center; min-height: 76px; border-bottom: 1px solid var(--line); }
+.radar-row.disabled { color: var(--muted); opacity: .52; }
+.radar-row.expired { background: var(--panel); padding-inline: 12px; }
+.radar-date { color: var(--muted); font: 11px/1.5 "Space Grotesk", "Noto Sans SC", sans-serif; }
+.radar-date strong { display: block; color: var(--text); font-size: 16px; font-weight: 500; }
+.radar-beacon { width: 8px; height: 8px; border: 1px solid var(--signal); background: var(--signal); }
+.radar-row.urgent .radar-beacon { border-color: var(--warning); background: var(--warning); }
+.radar-row.disabled .radar-beacon { border-color: var(--faint); background: transparent; }
+.radar-row.expired .radar-beacon { border-color: var(--faint); background: var(--faint); }
+.radar-name { font-size: 14px; font-weight: 600; }
+.radar-meta { margin-top: 5px; color: var(--muted); font-size: 11px; }
+.radar-meta b { color: var(--signal); font-weight: 500; }
+.radar-meta b.holiday { color: var(--warning); }
+.radar-count { min-width: 60px; color: var(--warning); text-align: right; font: 24px/.9 "Space Grotesk", sans-serif; }
+.radar-count small { display: block; margin-top: 4px; color: var(--muted); font: 10px "Noto Sans SC", sans-serif; }
+.radar-count.expired { color: var(--muted); font: 11px "Noto Sans SC", sans-serif; }
+.switch { width: 44px; height: 24px; position: relative; border: 1px solid var(--signal); background: rgba(98,214,194,.15); cursor: pointer; margin-top: 8px; }
+.switch::after { content: ""; position: absolute; top: 3px; left: 3px; width: 16px; height: 16px; background: var(--signal); transition: transform .18s ease; }
+.switch[aria-checked="false"] { border-color: var(--line); background: transparent; }
+.switch[aria-checked="false"]::after { transform: translateX(18px); background: var(--faint); }
+.switch-label { display: block; color: var(--muted); font-size: 9px; margin-top: 4px; text-align: right; }
+.sort-group-title { grid-column: 1 / -1; padding: 16px 0 5px; color: var(--signal); font: 11px "Space Grotesk", "Noto Sans SC", sans-serif; letter-spacing: .12em; }
+.expired-heading { margin: 30px 0 10px; color: var(--muted); font: 11px "Space Grotesk", "Noto Sans SC", sans-serif; letter-spacing: .12em; text-transform: uppercase; }
+.matrix { border: 1px solid var(--line); overflow-x: auto; }
+.matrix-head, .matrix-row { min-width: 650px; display: grid; grid-template-columns: 1.2fr .8fr 1.1fr .7fr; gap: 18px; align-items: center; padding: 0 20px; }
+.matrix-head { min-height: 42px; color: var(--muted); background: var(--panel); font: 10px "Space Grotesk", "Noto Sans SC", sans-serif; letter-spacing: .13em; text-transform: uppercase; }
+.matrix-row { min-height: 92px; border-top: 1px solid var(--line); }
+.matrix-row:nth-child(odd) { background: rgba(255,255,255,.018); }
+.matrix-name { font-size: 15px; font-weight: 600; }
+.matrix-name span { display: block; margin-top: 4px; color: var(--muted); font-size: 11px; font-weight: 400; }
+.matrix-relation { color: var(--signal); font-size: 12px; }
+.matrix-day { color: var(--text); font-size: 12px; }
+.matrix-day small { display: block; margin-top: 5px; color: var(--muted); font: 10px "Space Grotesk", "Noto Sans SC", sans-serif; }
+.matrix-count { color: var(--warning); font: 22px "Space Grotesk", sans-serif; text-align: right; }
+.matrix-count small { color: var(--muted); font: 10px "Noto Sans SC", sans-serif; }
+.axis-history { position: relative; padding-left: 86px; border-left: 1px solid var(--line); }
+.axis-history::before { content: ""; position: absolute; left: -1px; top: 0; bottom: 0; width: 1px; background: var(--signal); }
+.history-record { position: relative; min-height: 98px; padding: 18px 22px; border-bottom: 1px solid var(--line); background: var(--panel); }
+.history-record::before { content: ""; position: absolute; left: -5px; top: 23px; width: 9px; height: 9px; background: var(--void); border: 1px solid var(--signal); }
+.history-record.closed::before { border-color: var(--danger); }
+.history-date { position: absolute; left: -86px; top: 18px; width: 66px; color: var(--muted); font: 11px/1.45 "Space Grotesk", "Noto Sans SC", sans-serif; text-align: right; }
+.history-date strong { display: block; color: var(--signal); font-size: 16px; font-weight: 500; }
+.history-name { font-size: 15px; font-weight: 600; }
+.history-sub { margin-top: 5px; color: var(--muted); font-size: 11px; }
+.history-state { position: absolute; top: 20px; right: 20px; color: var(--signal); font: 10px "Space Grotesk", "Noto Sans SC", sans-serif; }
+.history-state.closed { color: var(--danger); }
+.bottom-nav { display: flex; border-top: 1px solid var(--line); padding: 0 clamp(18px, 5vw, 72px) env(safe-area-inset-bottom); background: var(--void); }
+.tab { flex: 1; min-height: 66px; border: 0; border-right: 1px solid var(--line); background: transparent; color: var(--muted); cursor: pointer; font: 12px "Space Grotesk", "Noto Sans SC", sans-serif; letter-spacing: .06em; }
+.tab:first-child { border-left: 1px solid var(--line); }
+.tab[aria-selected="true"] { color: var(--signal); background: var(--panel); box-shadow: inset 0 -2px var(--signal); }
+@media (max-width: 760px) {
+  .system-readout { display: none; }
+  .panel-head { display: block; }
+  .panel-note { margin-top: 12px; text-align: left; }
+  .reminder-console { grid-template-columns: 1fr; }
+  .command-panel { min-height: 0; }
+  .command-number { display: inline-block; margin: 28px 16px 0 0; font-size: 84px; }
+  .command-name { display: inline-block; }
+  .command-detail { margin-left: 105px; }
+  .axis-history { padding-left: 72px; }
+  .history-date { left: -72px; width: 54px; }
+}
+@media (max-width: 480px) {
+  .topbar { padding-inline: 16px; }
+  .main { padding: 26px 16px 38px; }
+  .bottom-nav { padding-inline: 16px; }
+  .panel-title { font-size: 43px; }
+  .radar-row { grid-template-columns: 58px 8px minmax(0, 1fr) auto; gap: 9px; }
+  .radar-count { min-width: 45px; font-size: 20px; }
+  .command-panel { padding: 20px; }
+  .history-state { position: static; margin-top: 13px; }
+}
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { transition-duration: .01ms !important; } }
+</style>
+</head>
+<body>
+<div class="shell">
+  <header class="topbar"><div class="brand"><span class="brand-mark">+</span><div><h1>心意管家 / NIGHT WATCH</h1><p>夜航星历 · 方案二</p></div></div><div class="system-readout"><span>LOCAL DATE <strong>2026.04.27</strong></span><span>SYNC <strong>READY</strong></span></div></header>
+  <main class="main">
+    <section class="panel" id="panel-reminder" role="tabpanel" aria-labelledby="tab-reminder">
+      <div class="panel-head"><div><p class="panel-kicker">care schedule / 01</p><h2 class="panel-title">提醒</h2></div><p class="panel-note">把即将发生的事放进一条时间跑道。青绿代表正常运行，琥珀代表需要优先准备。</p></div>
+      <div class="reminder-console"><aside class="command-panel"><div class="command-label">NEXT SIGNAL</div><div class="command-number">3</div><span class="command-unit">DAYS LEFT</span><div class="command-name">妈妈 · 生日</div><div class="command-detail">2026.04.30 / 母亲</div><div class="command-line">准备窗口已开启</div></aside><div class="radar"><div class="radar-head"><span>UPCOMING EVENTS</span><div class="sorts"><button class="sort-btn" type="button" data-sort="days" aria-pressed="true">剩余天数</button><button class="sort-btn" type="button" data-sort="contact" aria-pressed="false">联系人</button></div></div><div id="reminder-list"></div></div></div>
+    </section>
+    <section class="panel" id="panel-contact" role="tabpanel" aria-labelledby="tab-contact" hidden>
+      <div class="panel-head"><div><p class="panel-kicker">people / 02</p><h2 class="panel-title">联系人</h2></div><p class="panel-note">一张不带头像的关系矩阵。数据只保留与下一个重要日子有关的坐标。</p></div>
+      <div class="matrix"><div class="matrix-head"><span>NAME / CALLING</span><span>RELATION</span><span>NEXT DAY</span><span>COUNTDOWN</span></div><div id="contact-list"></div></div>
+    </section>
+    <section class="panel" id="panel-history" role="tabpanel" aria-labelledby="tab-history" hidden>
+      <div class="panel-head"><div><p class="panel-kicker">event log / 03</p><h2 class="panel-title">历史</h2></div><p class="panel-note">按发生日期向下回溯。已关闭提醒会保留事实，但内容状态明确标记为未生成。</p></div>
+      <div class="axis-history" id="history-list"></div>
+    </section>
+  </main>
+  <nav class="bottom-nav" aria-label="主导航" role="tablist"><button class="tab" id="tab-reminder" type="button" role="tab" aria-selected="true" aria-controls="panel-reminder" data-tab="reminder">01 / 提醒</button><button class="tab" id="tab-contact" type="button" role="tab" aria-selected="false" aria-controls="panel-contact" data-tab="contact">02 / 联系人</button><button class="tab" id="tab-history" type="button" role="tab" aria-selected="false" aria-controls="panel-history" data-tab="history">03 / 历史</button></nav>
+</div>
+<script>
+const prototypeData = {
+  contacts: [
+    { id: 'mom', name: '妈妈', relationship: '母亲', traits: '爱养花，今年刚退休', days: [{ name: '生日', date: '2026-04-30', daysRemaining: 3, source: '手动' }, { name: '母亲节', date: '2026-05-10', daysRemaining: 13, source: '自动关联' }] },
+    { id: 'wife', name: '妻子', relationship: '妻子', traits: '喜欢烘焙和旅行', days: [{ name: '结婚纪念日', date: '2026-05-04', daysRemaining: 7, source: '手动' }, { name: '妇女节', date: '2027-03-08', daysRemaining: 315, source: '自动关联' }] },
+    { id: 'dad', name: '爸爸', relationship: '父亲', traits: '退休教师，爱下棋钓鱼', days: [{ name: '父亲节', date: '2026-06-21', daysRemaining: 55, source: '自动关联' }] },
+    { id: 'daughter', name: '女儿小月', relationship: '女儿', traits: '小学三年级，学钢琴', days: [{ name: '生日', date: '2026-08-25', daysRemaining: 120, source: '手动' }] },
+    { id: 'li', name: '老同学李明', relationship: '大学室友', traits: '爱打篮球，程序猿', days: [{ name: '生日', date: '2026-06-11', daysRemaining: 45, source: '手动' }] }
+  ],
+  reminders: [
+    { id: 'r1', contactId: 'mom', displayName: '妈妈', relationship: '母亲', dayName: '生日', dayType: '生日', date: '2026-04-30', daysRemaining: 3, enabled: true, expired: false },
+    { id: 'r2', contactId: 'wife', displayName: '妻子', relationship: '妻子', dayName: '结婚纪念日', dayType: '纪念日', date: '2026-05-04', daysRemaining: 7, enabled: true, expired: false },
+    { id: 'r3', contactId: 'mom', displayName: '妈妈', relationship: '母亲', dayName: '母亲节', dayType: '节日', date: '2026-05-10', daysRemaining: 13, enabled: true, expired: false },
+    { id: 'r4', contactId: 'holiday', displayName: '端午节', relationship: '未关联联系人', dayName: '端午节', dayType: '纯节日', date: '2026-06-19', daysRemaining: 53, enabled: true, expired: false, holiday: true },
+    { id: 'r5', contactId: 'dad', displayName: '爸爸', relationship: '父亲', dayName: '父亲节', dayType: '节日', date: '2026-06-21', daysRemaining: 55, enabled: true, expired: false },
+    { id: 'r6', contactId: 'li', displayName: '老同学李明', relationship: '大学室友', dayName: '生日', dayType: '生日', date: '2026-06-11', daysRemaining: 45, enabled: false, expired: false },
+    { id: 'r7', contactId: 'daughter', displayName: '女儿小月', relationship: '女儿', dayName: '儿童节', dayType: '节日', date: '2026-04-10', daysRemaining: null, enabled: false, expired: true },
+    { id: 'r8', contactId: 'old-colleague', displayName: '老王', relationship: '前同事', dayName: '入职纪念日', dayType: '纪念日', date: '2026-03-20', daysRemaining: null, enabled: false, expired: true }
+  ],
+  history: [
+    { date: '2026-04-20', name: '邻居张阿姨', relationship: '邻居', dayName: '妇女节', contentState: 'closed' },
+    { date: '2026-03-15', name: '爸爸', relationship: '父亲', dayName: '生日', contentState: 'saved' },
+    { date: '2026-02-14', name: '妻子', relationship: '妻子', dayName: '情人节', contentState: 'saved' },
+    { date: '2026-01-18', name: '妈妈', relationship: '母亲', dayName: '生日', contentState: 'saved' },
+    { date: '2025-12-25', name: '老王', relationship: '前同事', dayName: '入职纪念日', contentState: 'saved' }
+  ]
+};
+let sortMode = 'days';
+const formatDate = value => { const [, month, day] = value.split('-'); return `${month}.${day}`; };
+const radarRow = item => `<article class="radar-row ${item.daysRemaining !== null && item.daysRemaining <= 7 ? 'urgent' : ''} ${item.enabled ? '' : 'disabled'} ${item.expired ? 'expired' : ''}"><div class="radar-date"><strong>${formatDate(item.date)}</strong>${item.expired ? 'ARCHIVED' : 'DATE'}</div><span class="radar-beacon" aria-hidden="true"></span><div><div class="radar-name">${item.displayName}</div><div class="radar-meta"><b class="${item.holiday ? 'holiday' : ''}">${item.dayName}</b> / ${item.relationship}${!item.expired && !item.enabled ? ' / 提醒关闭' : ''}</div></div><div class="radar-count ${item.expired ? 'expired' : ''}">${item.expired ? '已过期' : `<span>${item.daysRemaining}</span><small>DAYS</small><button class="switch" type="button" role="switch" aria-label="${item.displayName}的${item.dayName}提醒" aria-checked="${item.enabled}"></button><span class="switch-label">${item.enabled ? 'ON' : 'OFF'}</span>`}</div></article>`;
+function renderReminders() {
+  const active = prototypeData.reminders.filter(item => !item.expired);
+  const expired = prototypeData.reminders.filter(item => item.expired);
+  let html = '';
+  if (sortMode === 'days') active.sort((a, b) => a.daysRemaining - b.daysRemaining).forEach(item => { html += radarRow(item); });
+  else { const groups = new Map(); active.forEach(item => { const key = item.contactId === 'holiday' ? '节日 / UNLINKED' : item.displayName; if (!groups.has(key)) groups.set(key, []); groups.get(key).push(item); }); [...groups.entries()].sort(([a], [b]) => a.startsWith('节日') ? 1 : b.startsWith('节日') ? -1 : a.localeCompare(b, 'zh')).forEach(([name, items]) => { html += `<div class="sort-group-title">${name}</div>`; items.sort((a, b) => a.daysRemaining - b.daysRemaining).forEach(item => { html += radarRow(item); }); }); }
+  html += '<div class="expired-heading">ARCHIVED / 已过期</div>'; expired.forEach(item => { html += radarRow(item); });
+  document.getElementById('reminder-list').innerHTML = html;
+}
+function renderContacts() { document.getElementById('contact-list').innerHTML = prototypeData.contacts.map(person => { const next = [...person.days].sort((a, b) => a.daysRemaining - b.daysRemaining)[0]; return `<article class="matrix-row"><div class="matrix-name">${person.name}<span>${person.traits}</span></div><div class="matrix-relation">${person.relationship}</div><div class="matrix-day">${next.name}<small>${formatDate(next.date)} / ${next.source}</small></div><div class="matrix-count">${next.daysRemaining}<small>DAYS</small></div></article>`; }).join(''); }
+function renderHistory() { document.getElementById('history-list').innerHTML = prototypeData.history.map(item => `<article class="history-record ${item.contentState === 'closed' ? 'closed' : ''}"><div class="history-date"><strong>${formatDate(item.date)}</strong>LOG</div><div class="history-name">${item.name}</div><div class="history-sub">${item.relationship} / ${item.dayName}</div><div class="history-state ${item.contentState === 'closed' ? 'closed' : ''}">${item.contentState === 'closed' ? 'CONTENT EMPTY / 提醒已关闭' : 'CONTENT SAVED / 内容已保存'}</div></article>`).join(''); }
+function selectTab(target) { document.querySelectorAll('[role="tab"]').forEach(tab => tab.setAttribute('aria-selected', String(tab.dataset.tab === target))); document.querySelectorAll('.panel').forEach(panel => { panel.hidden = panel.id !== `panel-${target}`; }); }
+document.querySelectorAll('[role="tab"]').forEach(tab => tab.addEventListener('click', () => selectTab(tab.dataset.tab)));
+document.querySelectorAll('[data-sort]').forEach(button => button.addEventListener('click', () => { sortMode = button.dataset.sort; document.querySelectorAll('[data-sort]').forEach(item => item.setAttribute('aria-pressed', String(item === button))); renderReminders(); }));
+document.addEventListener('click', event => { const toggle = event.target.closest('.switch'); if (!toggle) return; const enabled = toggle.getAttribute('aria-checked') === 'true'; const item = prototypeData.reminders.find(reminder => `${reminder.displayName}的${reminder.dayName}提醒` === toggle.getAttribute('aria-label')); if (item) item.enabled = !enabled; renderReminders(); });
+renderReminders(); renderContacts(); renderHistory();
+</script>
+</body>
+</html>
