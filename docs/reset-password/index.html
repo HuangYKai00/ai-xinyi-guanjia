@@ -205,43 +205,61 @@ function clearError() {
   errorBox.classList.add('hidden');
 }
 
-// 邮件里的 recovery 链接默认走 implicit flow，token 在 URL hash 上。
-// 部分客户端会把参数放到 query 上，这里两种都清理掉，避免 token 留在地址栏或浏览器历史里。
+// 凭证必须先抓下来、再清理地址栏 —— 顺序不能反，否则 token 丢失。
+// 默认 implicit flow 把 access_token / refresh_token 放在 URL hash 上；
+// 这里同时兼容 PKCE 的 ?code= 与自定义模板的 token_hash，不依赖具体配置。
+const rawParams = new URLSearchParams(
+  (window.location.hash.startsWith('#') ? window.location.hash.slice(1) : '') ||
+    (window.location.search.startsWith('?') ? window.location.search.slice(1) : ''),
+);
+const accessToken = rawParams.get('access_token');
+const refreshToken = rawParams.get('refresh_token');
+const authCode = rawParams.get('code');
+const tokenHash = rawParams.get('token_hash');
+const otpType = rawParams.get('type');
+const hasToken = Boolean((accessToken && refreshToken) || authCode || (tokenHash && otpType));
+
+// 清理地址栏，避免凭证留在浏览器历史或截图里
 if (window.location.hash || window.location.search) {
   history.replaceState(null, '', window.location.pathname);
 }
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: { detectSessionInUrl: true, persistSession: true, autoRefreshToken: false },
+  auth: { detectSessionInUrl: false, persistSession: true, autoRefreshToken: false },
 });
 
-let ready = false;
-
-supabase.auth.onAuthStateChange((event, session) => {
-  if (event === 'PASSWORD_RECOVERY' || (event === 'SIGNED_IN' && session)) {
-    ready = true;
-    show('form', ['账号 · 重置密码', '设置新密码', '重置链接已校验通过，请设置一个新的登录密码。']);
-  }
-});
-
-// 兜底：hash 解析可能早于监听注册，或链接已经建立过 session。
-const { data: { session: existing } } = await supabase.auth.getSession();
-if (existing && !ready) {
-  ready = true;
+function showForm() {
   show('form', ['账号 · 重置密码', '设置新密码', '重置链接已校验通过，请设置一个新的登录密码。']);
 }
 
-if (!ready) {
-  setTimeout(async () => {
-    if (ready) return;
-    const { data: { session } } = await supabase.auth.getSession();
-    if (session) {
-      ready = true;
-      show('form', ['账号 · 重置密码', '设置新密码', '重置链接已校验通过，请设置一个新的登录密码。']);
-    } else {
-      show('invalid');
-    }
-  }, 1500);
+// 用链接里的凭证建立会话，成功返回 true
+async function establishSessionFromLink() {
+  if (accessToken && refreshToken) {
+    const { error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+    if (!error) return true;
+  }
+  if (authCode) {
+    const { error } = await supabase.auth.exchangeCodeForSession(authCode);
+    if (!error) return true;
+  }
+  if (tokenHash && otpType) {
+    const { error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: otpType });
+    if (!error) return true;
+  }
+  return false;
+}
+
+try {
+  if (hasToken) {
+    // 链接带了凭证：只认这份凭证，避免误改当前浏览器里已登录的其他账号
+    (await establishSessionFromLink()) ? showForm() : show('invalid');
+  } else {
+    // 链接没带凭证：可能已登录用户直接打开，也可能是失效链接
+    const { data } = await supabase.auth.getSession();
+    data.session ? showForm() : show('invalid');
+  }
+} catch {
+  show('invalid');
 }
 
 document.getElementById('submitBtn').addEventListener('click', async (event) => {
